@@ -56,6 +56,15 @@
 
         <li>
 
+            <a class="apidocElementLiA" href="#apidoc.element.module-deps.module-deps">
+            function <span class="apidocSignatureSpan"></span>module-deps
+            <span class="apidocSignatureSpan">(opts)</span>
+            </a>
+
+        </li>
+
+        <li>
+
             <a class="apidocElementLiA" href="#apidoc.element.module-deps.super_">
             function <span class="apidocSignatureSpan">module-deps.</span>super_
             <span class="apidocSignatureSpan">(options)</span>
@@ -347,6 +356,73 @@
 
 <div class="apidocSectionDiv">
 <h1><a href="#apidoc.module.module-deps" id="apidoc.module.module-deps">module module-deps</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.module-deps.module-deps" id="apidoc.element.module-deps.module-deps">
+        function <span class="apidocSignatureSpan"></span>module-deps
+        <span class="apidocSignatureSpan">(opts)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">function Deps(opts) {
+    var self = this;
+    if (!(this instanceof Deps)) return new Deps(opts);
+    Transform.call(this, { objectMode: true });
+
+    if (!opts) opts = {};
+
+    this.basedir = opts.basedir || process.cwd();
+    this.persistentCache = opts.persistentCache || function (file, id, pkg, fallback, cb) {
+        process.nextTick(function () {
+            fallback(null, cb);
+        });
+    };
+    this.cache = opts.cache;
+    this.fileCache = opts.fileCache;
+    this.pkgCache = opts.packageCache || {};
+    this.pkgFileCache = {};
+    this.pkgFileCachePending = {};
+    this._emittedPkg = {};
+    this.visited = {};
+    this.walking = {};
+    this.entries = [];
+    this._input = [];
+
+    this.paths = opts.paths || process.env.NODE_PATH || '';
+    if (typeof this.paths === 'string') {
+        var delimiter = path.delimiter || (process.platform === 'win32' ? ';' : ':');
+        this.paths = this.paths.split(delimiter);
+    }
+    this.paths = this.paths
+        .filter(Boolean)
+        .map(function (p) {
+            return path.resolve(self.basedir, p);
+        });
+
+    this.transforms = [].concat(opts.transform).filter(Boolean);
+    this.globalTransforms = [].concat(opts.globalTransform).filter(Boolean);
+    this.resolver = opts.resolve || browserResolve;
+    this.options = xtend(opts);
+    if (!this.options.modules) this.options.modules = {};
+
+    // If the caller passes options.expose, store resolved pathnames for exposed
+    // modules in it. If not, set it anyway so it's defined later.
+    if (!this.options.expose) this.options.expose = {};
+    this.pending = 0;
+    this.inputPending = 0;
+
+    var topfile = path.join(this.basedir, '__fake.js');
+    this.top = {
+        id: topfile,
+        filename: topfile,
+        paths: this.paths,
+        basedir: this.basedir
+    };
+}</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
 
 
     <h2>
@@ -742,7 +818,23 @@ toLowerCase()) &gt; -1)) throw new TypeError('Unknown encoding: ' + encoding);
 
   return ret;
 }</pre></li>
-    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+var files = argv._.map(function (file) {
+    if (file === '-') return process.stdin;
+    return path.resolve(file);
+});
+var md = mdeps(argv);
+md.pipe(JSONStream.stringify()).pipe(process.stdout);
+
+files.forEach(function (file) { md.<span class="apidocCodeKeywordSpan">write</span>(file) });
+md.end();
+
+function usage (code) {
+    var r = fs.createReadStream(__dirname + '/usage.txt');
+    r.pipe(process.stdout);
+    if (code) r.on('end', function () { process.exit(code) });
+}
+...</pre></li>
     </ul>
 
 
@@ -1214,7 +1306,17 @@ else if (row.transform) {
   }
   return this;
 }</pre></li>
-    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+    d.on('package', function (pkg_) {
+        var pkg = JSON.parse(fs.readFileSync(dirname + pkg_.dir + '/package.json'));
+        pkg.__dirname = path.join(dirname, pkg_.dir);
+
+        t.deepEqual(pkg_, pkg);
+    });
+    d.end(path.join(__dirname, '/pkg/main.js'));
+    d.<span class="apidocCodeKeywordSpan">resume</span>();
+});
+...</pre></li>
     </ul>
 
 
@@ -1363,10 +1465,9 @@ else if (row.transform) {
   }
 
   // proxy certain important events.
-  var events = ['error', 'close', 'destroy', 'pause', 'resume'];
-  forEach(events, function (ev) {
-    stream.on(ev, self.emit.bind(self, ev));
-  });
+  for (var n = 0; n &lt; kProxyEvents.length; n++) {
+    stream.on(kProxyEvents[n], self.emit.bind(self, kProxyEvents[n]));
+  }
 
   // when we try to consume some more bytes, simply unpause the
   // underlying stream.
